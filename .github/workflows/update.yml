@@ -1,136 +1,31 @@
-name: Check for T3 Code Updates
+name: Update T3 Code
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: "0 */6 * * *"
   workflow_dispatch:
-    inputs:
-      version:
-        description: Specific version to update to
-        required: false
-        type: string
 
 permissions:
   contents: write
-  issues: write
   pull-requests: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    env:
-      GH_UPDATE_TOKEN: ${{ secrets.GH_TOKEN_FOR_UPDATES || github.token }}
-      REQUESTED_VERSION: ${{ github.event.inputs.version || '' }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
         with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-
-      - name: Check for update
-        id: check
-        run: |
-          if [ -n "$REQUESTED_VERSION" ]; then
-            echo "update_needed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          set +e
-          ./scripts/update.sh --check
-          status=$?
-          set -e
-
-          if [ "$status" -eq 0 ]; then
-            echo "update_needed=false" >> "$GITHUB_OUTPUT"
-          elif [ "$status" -eq 1 ]; then
-            echo "update_needed=true" >> "$GITHUB_OUTPUT"
-          else
-            exit "$status"
-          fi
-
-      - name: Apply update
-        if: steps.check.outputs.update_needed == 'true'
-        run: |
-          if [ -n "$REQUESTED_VERSION" ]; then
-            ./scripts/update.sh --version "$REQUESTED_VERSION"
-          else
-            ./scripts/update.sh
-          fi
-
-      - name: Read updated version
-        if: steps.check.outputs.update_needed == 'true'
-        id: version
-        run: |
-          version="$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' package.nix | head -1)"
-          echo "value=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Warn if update token is not configured
-        if: steps.check.outputs.update_needed == 'true'
+          extra_nix_config: experimental-features = nix-command flakes
+      - name: Update stable and nightly
         env:
-          GH_TOKEN_FOR_UPDATES: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
-        run: |
-          if [ -z "${GH_TOKEN_FOR_UPDATES}" ]; then
-            echo "::warning::GH_TOKEN_FOR_UPDATES is not set. Pull requests created with GITHUB_TOKEN will not trigger pull_request CI."
-          fi
-
-      - name: Ensure automatic label exists
-        if: steps.check.outputs.update_needed == 'true'
-        run: |
-          gh label create automatic \
-            --color 1D76DB \
-            --description "Automated repository maintenance" \
-            --force
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Create pull request
-        if: steps.check.outputs.update_needed == 'true'
-        id: cpr
+          GH_UPDATE_TOKEN: ${{ github.token }}
+        run: ./scripts/update.sh all
+      - name: Create update PR
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ env.GH_UPDATE_TOKEN }}
-          branch-token: ${{ env.GH_UPDATE_TOKEN }}
-          commit-message: "chore: update t3code to version ${{ steps.version.outputs.value }}"
-          title: "chore: update t3code to version ${{ steps.version.outputs.value }}"
-          branch: "update-t3code-${{ steps.version.outputs.value }}"
+          branch: automated/t3code-update
           delete-branch: true
-          labels: automatic
-          body: |
-            Automated update for T3 Code.
-
-            Updated artifacts:
-            - Desktop AppImage in `package.nix`
-            - Optional CLI package in `package-cli.nix`
-            - `npm/package.json`
-            - `npm/package-lock.json`
-
-            Validation:
-            - `nix flake check`
-            - `nix eval .#packages.x86_64-darwin.t3code.drvPath`
-            - `nix eval .#packages.aarch64-darwin.t3code.drvPath`
-            - `nix build .#t3code`
-            - `nix build .#t3code-cli`
-            - GitHub Actions CI builds the flake on Linux, Apple Silicon macOS, and Intel macOS
-
-      - name: Enable auto-merge
-        if: steps.cpr.outputs.pull-request-number != ''
-        run: gh pr merge --squash --auto "${{ steps.cpr.outputs.pull-request-number }}"
-        env:
-          GH_TOKEN: ${{ env.GH_UPDATE_TOKEN }}
-
-      - name: Summarize
-        if: always()
-        run: |
-          echo "## Update run" >> "$GITHUB_STEP_SUMMARY"
-          echo "- requested version: ${REQUESTED_VERSION:-latest}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- update needed: ${{ steps.check.outputs.update_needed || 'false' }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- pull request: ${{ steps.cpr.outputs.pull-request-number || 'none' }}" >> "$GITHUB_STEP_SUMMARY"
+          commit-message: "chore: update T3 Code releases"
+          title: "chore: update T3 Code releases"
+          body: "Updates the pinned stable and nightly T3 Code desktop releases and verifies both Linux builds."
