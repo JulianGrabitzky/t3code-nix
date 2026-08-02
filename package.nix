@@ -7,20 +7,20 @@
 , unzip
 , codexSupport ? true
 , codex
+, release
 }:
 
 let
   pname = "t3code";
-  version = "0.0.25";
-  linuxHash = "sha256-aO1gFdYRs/9kvT8/1W4/v5e8os9E7rJl46BTK9SUglI=";
-  darwinX64Hash = "sha256-85HpUbgJ87K3BrSQ/g17guUUXwAieYtDbcRWgPAHEmg=";
-  darwinArm64Hash = "sha256-tVe1k3DmlVGX1rzN3s3ivLIYsBkixx06B0eQJQBZX9g=";
+  inherit (release) version;
+
+  hashOrFake = hash:
+    if hash == null || hash == "" then lib.fakeHash else hash;
 
   commonMeta = {
     description = "T3 Code desktop app packaged from upstream release artifacts";
     homepage = "https://github.com/pingdotgg/t3code";
     changelog = "https://github.com/pingdotgg/t3code/releases/tag/v${version}";
-    downloadPage = "https://github.com/pingdotgg/t3code/releases";
     license = lib.licenses.mit;
     mainProgram = pname;
     sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
@@ -35,7 +35,7 @@ let
     let
       src = fetchurl {
         url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
-        hash = linuxHash;
+        hash = hashOrFake release.linuxHash;
       };
 
       appimageContents = appimageTools.extractType2 {
@@ -97,9 +97,9 @@ let
       "T3-Code-${version}-x64.zip";
   darwinHash =
     if stdenv.hostPlatform.isAarch64 then
-      darwinArm64Hash
+      hashOrFake release.darwinArm64Hash
     else
-      darwinX64Hash;
+      hashOrFake release.darwinX64Hash;
 
   darwinPackage = stdenvNoCC.mkDerivation {
     inherit pname version;
@@ -109,11 +109,7 @@ let
       hash = darwinHash;
     };
 
-    nativeBuildInputs = [
-      makeWrapper
-      unzip
-    ];
-
+    nativeBuildInputs = [ makeWrapper unzip ];
     sourceRoot = ".";
     dontConfigure = true;
     dontBuild = true;
@@ -129,7 +125,7 @@ let
         "$out/bin/${pname}" \
         ${lib.optionalString codexSupport ''
           --prefix PATH : "${lib.makeBinPath [ codex ]}"
-        ''}
+        ''
 
       runHook postInstall
     '';
