@@ -1,151 +1,36 @@
 # t3code-nix
 
-Nix flake packaging for the upstream [T3 Code](https://github.com/pingdotgg/t3code) desktop application, with the upstream `t3` CLI exposed as an optional secondary package.
-
-## Why this exists
-
-Upstream currently ships a Linux AppImage, macOS desktop archives, and the CLI through npm. This repository packages those artifacts directly in Nix so users can install pinned versions without ad hoc runtime downloads.
-
-The desktop application is the primary output of this flake.
-
-## Inspiration
-
-The repository structure and update automation approach are inspired by [sadjow/codex-cli-nix](https://github.com/sadjow/codex-cli-nix).
+Nix packaging for the [T3 Code](https://github.com/pingdotgg/t3code) desktop app.
 
 ## Packages
 
-- `t3code` / `t3code-desktop`: desktop application packaged from the upstream Linux AppImage or macOS zip archive, depending on platform
-- `t3code-cli` / `t3`: optional CLI packaged from the upstream npm tarball
-- `default`: desktop application
+- `t3code` / `t3code-stable` — latest pinned stable release
+- `t3code-nightly` — latest pinned nightly release
 
-## Install
-
-Run the desktop application directly:
+Run either channel:
 
 ```bash
-nix run github:Sawrz/t3code-nix
+nix run github:JulianGrabitzky/t3code-nix#t3code-stable
+nix run github:JulianGrabitzky/t3code-nix#t3code-nightly
 ```
 
-Run the CLI directly:
-
-```bash
-nix run github:Sawrz/t3code-nix#t3
-```
-
-Install the desktop app into your profile:
-
-```bash
-nix profile install github:Sawrz/t3code-nix#t3code
-```
-
-Install the CLI into your profile:
-
-```bash
-nix profile install github:Sawrz/t3code-nix#t3
-```
-
-Use as a flake input:
+Use as a NixOS flake input:
 
 ```nix
-{
-  inputs.t3code-nix.url = "github:Sawrz/t3code-nix";
-
-  outputs = { self, nixpkgs, t3code-nix, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ t3code-nix.overlays.default ];
-      };
-    in
-    {
-      packages.${system}.default = pkgs.t3code;
-    };
-}
+inputs.t3code-nix = {
+  url = "github:JulianGrabitzky/t3code-nix";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
 ```
 
-## What gets installed
+Then install one channel:
 
-Desktop package:
-
-- `x86_64-linux`: fetches the upstream AppImage from GitHub releases and wraps it with `appimageTools.wrapType2`
-- `x86_64-darwin` and `aarch64-darwin`: fetches the matching upstream zip archive and installs the `.app` bundle into the Nix store with a `t3code` launcher
-
-CLI package:
-
-- fetches the upstream `t3` npm tarball
-- vendors the locked Node dependency graph in the Nix store
-- runs the packaged entrypoint with the packaged Node interpreter
-
-## Update automation
-
-The GitHub Actions update workflow checks upstream releases every six hours.
-
-An update is valid only when all of these exist for the same version:
-
-- a GitHub release in `pingdotgg/t3code` with an `x86_64` AppImage asset
-- the matching GitHub release also includes `x64.zip` and `arm64.zip` macOS desktop assets
-- a matching npm package version `t3@<version>`
-
-When a new version is found, the updater:
-
-- refreshes `package.nix` for the Linux AppImage and macOS desktop archives
-- refreshes `package-cli.nix` for the CLI package
-- regenerates `npm/package.json`
-- regenerates `npm/package-lock.json`
-- runs `nix flake check`
-- evaluates the Darwin desktop and CLI derivations
-- builds `.#t3code`
-- builds `.#t3code-cli`
-- opens a pull request
-
-Pull requests and pushes are validated separately by CI on:
-
-- `ubuntu-latest` for `x86_64-linux`
-- `macos-15` for `aarch64-darwin`
-- `macos-15-intel` for `x86_64-darwin`
-
-Merged updates are released automatically on `main` by tagging the repository with `v<version>` and publishing a matching GitHub release.
-
-## Repository Setup
-
-For the automation to work cleanly, configure these repository settings:
-
-- Actions > General > Workflow permissions: `Read and write permissions`
-- Actions > General > Allow GitHub Actions to create and approve pull requests: enabled
-- Pull Requests: auto-merge enabled
-- Branches: protect `main` and require the three CI jobs from `CI`
-- Branches: automatically delete head branches enabled
-
-Recommended secret:
-
-- `GH_TOKEN_FOR_UPDATES`: a fine-grained personal access token with `Contents: Read and write` and `Pull requests: Read and write`
-
-The updater falls back to `GITHUB_TOKEN` if the secret is absent, but in that mode the bot-created PR will not trigger `pull_request` CI.
-
-## Limitations
-
-- Desktop support is currently `x86_64-linux`, `x86_64-darwin`, and `aarch64-darwin`.
-- The desktop package is built from upstream binary artifacts.
-- The CLI package is optional and follows upstream npm publication.
-- GitHub Actions is configured to build the flake on `x86_64-linux`, `x86_64-darwin`, and `aarch64-darwin`.
-
-## Development
-
-Update to the latest upstream release:
-
-```bash
-nix develop -c ./scripts/update.sh
+```nix
+environment.systemPackages = [
+  inputs.t3code-nix.packages.${pkgs.system}.t3code-nightly
+];
 ```
 
-Check whether an update is available:
+Use `t3code-stable` instead to switch back to stable. Both packages install the normal T3 Code desktop launcher, so install only one channel at a time.
 
-```bash
-nix develop -c ./scripts/update.sh --check
-```
-
-Update to a specific version:
-
-```bash
-nix develop -c ./scripts/update.sh --version 0.0.4
-```
+The update workflow checks upstream every six hours and opens a PR when stable or nightly changes.
