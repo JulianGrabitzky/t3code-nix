@@ -1,5 +1,5 @@
 {
-  description = "Nix flake for the T3 Code desktop app and CLI";
+  description = "Nix flake for T3 Code stable and nightly desktop builds";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -8,20 +8,24 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     let
+      versions = builtins.fromJSON (builtins.readFile ./versions.json);
       supportedSystems = [
         "x86_64-linux"
         "x86_64-darwin"
         "aarch64-darwin"
       ];
-      overlay = final: prev: {
-        t3code = final.callPackage ./package.nix { };
-        t3code-desktop = final.t3code;
-        t3code-cli = final.callPackage ./package-cli.nix { };
-        t3 = final.t3code-cli;
+      overlay = final: _prev: {
+        t3code-stable = final.callPackage ./package.nix {
+          release = versions.stable;
+        };
+        t3code-nightly = final.callPackage ./package.nix {
+          release = versions.nightly;
+        };
+        t3code = final.t3code-stable;
       };
-      mkApp = drv: binary: {
+      mkApp = drv: {
         type = "app";
-        program = "${drv}/bin/${binary}";
+        program = "${drv}/bin/t3code";
         meta = drv.meta;
       };
     in
@@ -36,35 +40,26 @@
         in
         {
           packages = {
-            default = pkgs.t3code;
-            t3code = pkgs.t3code;
-            t3code-desktop = pkgs.t3code-desktop;
-            t3code-cli = pkgs.t3code-cli;
-            t3 = pkgs.t3;
+            default = pkgs.t3code-stable;
+            t3code = pkgs.t3code-stable;
+            t3code-stable = pkgs.t3code-stable;
+            t3code-nightly = pkgs.t3code-nightly;
           };
 
           apps = {
-            default = mkApp pkgs.t3code "t3code";
-            t3code = mkApp pkgs.t3code "t3code";
-            t3code-desktop = mkApp pkgs.t3code-desktop "t3code";
-            t3code-cli = mkApp pkgs.t3code-cli "t3";
-            t3 = mkApp pkgs.t3 "t3";
+            default = mkApp pkgs.t3code-stable;
+            t3code = mkApp pkgs.t3code-stable;
+            t3code-stable = mkApp pkgs.t3code-stable;
+            t3code-nightly = mkApp pkgs.t3code-nightly;
           };
 
           checks = {
-            t3code-build = pkgs.t3code;
-            t3-cli-build = pkgs.t3code-cli;
-            t3-cli-help = pkgs.runCommand "t3-cli-help" { } ''
-              ${pkgs.t3code-cli}/bin/t3 --help > "$out"
-            '';
+            stable = pkgs.t3code-stable;
+            nightly = pkgs.t3code-nightly;
           };
 
           devShells.default = pkgs.mkShell {
-            packages = with pkgs; [
-              jq
-              nodejs_22
-              nixpkgs-fmt
-            ];
+            packages = with pkgs; [ jq nixpkgs-fmt ];
           };
         }
       )
