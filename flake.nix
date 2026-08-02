@@ -9,11 +9,6 @@
   outputs = { self, nixpkgs, flake-utils }:
     let
       versions = builtins.fromJSON (builtins.readFile ./versions.json);
-      supportedSystems = [
-        "x86_64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
       overlay = final: _prev: {
         t3code-stable = final.callPackage ./package.nix {
           release = versions.stable;
@@ -29,9 +24,8 @@
         meta = drv.meta;
       };
     in
-    flake-utils.lib.eachSystem supportedSystems
-      (
-        system:
+    flake-utils.lib.eachSystem [ "x86_64-linux" ]
+      (system:
         let
           pkgs = import nixpkgs {
             inherit system;
@@ -61,8 +55,7 @@
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [ jq nixpkgs-fmt ];
           };
-        }
-      )
+        })
     // {
       overlays.default = overlay;
     };
