@@ -11,30 +11,12 @@ permissions:
 
 jobs:
   build:
-    name: ${{ matrix.system }} / ${{ matrix.package }}
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - system: x86_64-linux
-            os: ubuntu-latest
-            package: t3code-stable
-          - system: x86_64-linux
-            os: ubuntu-latest
-            package: t3code-nightly
-          - system: aarch64-darwin
-            os: macos-15
-            package: t3code-stable
-          - system: aarch64-darwin
-            os: macos-15
-            package: t3code-nightly
-          - system: x86_64-darwin
-            os: macos-15-intel
-            package: t3code-stable
-          - system: x86_64-darwin
-            os: macos-15-intel
-            package: t3code-nightly
-    runs-on: ${{ matrix.os }}
+        package: [t3code-stable, t3code-nightly]
     steps:
       - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v31
