@@ -1,0 +1,14 @@
+{
+  "stable": {
+    "version": "0.0.28",
+    "linuxHash": null,
+    "darwinX64Hash": null,
+    "darwinArm64Hash": null
+  },
+  "nightly": {
+    "version": "0.0.29-nightly.20260723.882",
+    "linuxHash": null,
+    "darwinX64Hash": null,
+    "darwinArm64Hash": null
+  }
+}
