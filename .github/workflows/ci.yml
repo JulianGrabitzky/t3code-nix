@@ -15,15 +15,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        system: [x86_64-linux, aarch64-darwin, x86_64-darwin]
-        package: [t3code-stable, t3code-nightly]
         include:
           - system: x86_64-linux
             os: ubuntu-latest
+            package: t3code-stable
+          - system: x86_64-linux
+            os: ubuntu-latest
+            package: t3code-nightly
           - system: aarch64-darwin
             os: macos-15
+            package: t3code-stable
+          - system: aarch64-darwin
+            os: macos-15
+            package: t3code-nightly
           - system: x86_64-darwin
             os: macos-15-intel
+            package: t3code-stable
+          - system: x86_64-darwin
+            os: macos-15-intel
+            package: t3code-nightly
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
