@@ -4,7 +4,7 @@
     "linuxHash": "sha256-SS7ctI7vlzCfNMS3CoEhuGfDronCBowuKLs5Oo2CLCI="
   },
   "nightly": {
-    "version": "0.0.33-nightly.20260807.1025",
-    "linuxHash": "sha256-PBUXhhGAgqWBx7oV9hxWcM/42wejHR/gpE+LgXIRj0I="
+    "version": "0.0.33-nightly.20260807.1026",
+    "linuxHash": "sha256-LgvIjZ/kYzj384nG/dhNnaZqpkNMBEuRPhpPgUdv01k="
   }
 }
