@@ -1,10 +1,10 @@
 {
   "stable": {
-    "version": "0.0.31",
-    "linuxHash": "sha256-AqTkoSKeQwmql3L9F5SbD1XyqeFyqe11ciq9Tp04Zyw="
+    "version": "0.0.32",
+    "linuxHash": "sha256-SS7ctI7vlzCfNMS3CoEhuGfDronCBowuKLs5Oo2CLCI="
   },
   "nightly": {
-    "version": "0.0.32-nightly.20260804.997",
-    "linuxHash": "sha256-iq6Eg902P6vhihTBE0MDjYPei/svczlGgId/4qxtd+Y="
+    "version": "0.0.33-nightly.20260807.1025",
+    "linuxHash": "sha256-PBUXhhGAgqWBx7oV9hxWcM/42wejHR/gpE+LgXIRj0I="
   }
 }
